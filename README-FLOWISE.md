@@ -4,8 +4,6 @@
 
 # Flowise - Build LLM Apps Easily
 
-English | [中文](./README-ZH.md) | [日本語](./README-JA.md) | [한국어](./README-KR.md)
-
 <h3>Drag & drop UI to build your customized LLM flow</h3>
 <a href="https://github.com/FlowiseAI/Flowise">
 <img width="100%" src="https://github.com/FlowiseAI/Flowise/blob/main/images/flowise.gif?raw=true"></a>
@@ -33,7 +31,7 @@ Flowise has 3 different modules in a single mono repository.
 2. Go into repository folder
 
     ```bash
-    cd llm-workflow
+    cd llm-workflows
     ```
 
 3. Install all dependencies of all modules:

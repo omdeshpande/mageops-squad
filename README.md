@@ -22,4 +22,4 @@ Magento functional expert, whose job is to ensure all required information is co
 
 **Developer**
 
-Exexutes actions in the store via API calls.
+Executes actions in the store via API calls.

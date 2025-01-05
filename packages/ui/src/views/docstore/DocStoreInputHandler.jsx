@@ -70,6 +70,14 @@ const DocStoreInputHandler = ({ inputParam, data, disabled = false }) => {
         data.inputs[inputParamName] = newValue
     }
 
+    const getCredential = () => {
+        const credential = data.inputs.credential || data.inputs[FLOWISE_CREDENTIAL_ID]
+        if (credential) {
+            return { credential }
+        }
+        return {}
+    }
+
     return (
         <div>
             {inputParam && (
@@ -118,8 +126,9 @@ const DocStoreInputHandler = ({ inputParam, data, disabled = false }) => {
                         )}
                         {inputParam.type === 'credential' && (
                             <CredentialInputHandler
+                                key={JSON.stringify(inputParam)}
                                 disabled={disabled}
-                                data={data}
+                                data={getCredential()}
                                 inputParam={inputParam}
                                 onSelect={(newValue) => {
                                     data.credential = newValue
@@ -189,6 +198,7 @@ const DocStoreInputHandler = ({ inputParam, data, disabled = false }) => {
                         )}
                         {inputParam.type === 'options' && (
                             <Dropdown
+                                key={JSON.stringify(inputParam)}
                                 disabled={disabled}
                                 name={inputParam.name}
                                 options={inputParam.options}
@@ -198,6 +208,7 @@ const DocStoreInputHandler = ({ inputParam, data, disabled = false }) => {
                         )}
                         {inputParam.type === 'multiOptions' && (
                             <MultiDropdown
+                                key={JSON.stringify(inputParam)}
                                 disabled={disabled}
                                 name={inputParam.name}
                                 options={inputParam.options}
@@ -207,9 +218,10 @@ const DocStoreInputHandler = ({ inputParam, data, disabled = false }) => {
                         )}
                         {inputParam.type === 'asyncOptions' && (
                             <>
-                                {data.inputParams.length === 1 && <div style={{ marginTop: 10 }} />}
+                                {data.inputParams?.length === 1 && <div style={{ marginTop: 10 }} />}
                                 <div style={{ display: 'flex', flexDirection: 'row' }}>
                                     <AsyncDropdown
+                                        key={JSON.stringify(inputParam)}
                                         disabled={disabled}
                                         name={inputParam.name}
                                         nodeData={data}

@@ -5,6 +5,12 @@ import { ICommonObject, INode, INodeData, INodeOptionsValue, INodeParams } from 
 import { getBaseClasses, getCredentialData, getCredentialParam } from '../../../src/utils'
 import { getModels, MODEL_TYPE } from '../../../src/modelLoader'
 
+const serverCredentialsExists =
+    !!process.env.AZURE_OPENAI_API_KEY &&
+    !!process.env.AZURE_OPENAI_API_INSTANCE_NAME &&
+    !!process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME &&
+    !!process.env.AZURE_OPENAI_API_VERSION
+
 class AzureOpenAI_LLMs implements INode {
     label: string
     name: string
@@ -20,7 +26,7 @@ class AzureOpenAI_LLMs implements INode {
     constructor() {
         this.label = 'Azure OpenAI'
         this.name = 'azureOpenAI'
-        this.version = 3.0
+        this.version = 4.0
         this.type = 'AzureOpenAI'
         this.icon = 'Azure.svg'
         this.category = 'LLMs'
@@ -30,7 +36,8 @@ class AzureOpenAI_LLMs implements INode {
             label: 'Connect Credential',
             name: 'credential',
             type: 'credential',
-            credentialNames: ['azureOpenAIApi']
+            credentialNames: ['azureOpenAIApi'],
+            optional: serverCredentialsExists
         }
         this.inputs = [
             {
@@ -101,6 +108,13 @@ class AzureOpenAI_LLMs implements INode {
                 step: 1,
                 optional: true,
                 additionalParams: true
+            },
+            {
+                label: 'BasePath',
+                name: 'basepath',
+                type: 'string',
+                optional: true,
+                additionalParams: true
             }
         ]
     }
@@ -122,6 +136,7 @@ class AzureOpenAI_LLMs implements INode {
         const timeout = nodeData.inputs?.timeout as string
         const bestOf = nodeData.inputs?.bestOf as string
         const streaming = nodeData.inputs?.streaming as boolean
+        const basePath = nodeData.inputs?.basepath as string
 
         const credentialData = await getCredentialData(nodeData.credential ?? '', options)
         const azureOpenAIApiKey = getCredentialParam('azureOpenAIApiKey', credentialData, nodeData)
@@ -148,6 +163,7 @@ class AzureOpenAI_LLMs implements INode {
         if (timeout) obj.timeout = parseInt(timeout, 10)
         if (bestOf) obj.bestOf = parseInt(bestOf, 10)
         if (cache) obj.cache = cache
+        if (basePath) obj.azureOpenAIBasePath = basePath
 
         const model = new OpenAI(obj)
         return model

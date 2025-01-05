@@ -14,7 +14,6 @@ class DocStore_DocumentLoaders implements INode {
     baseClasses: string[]
     inputs: INodeParams[]
     outputs: INodeOutputsValue[]
-    badge: string
 
     constructor() {
         this.label = 'Document Store'
@@ -22,7 +21,6 @@ class DocStore_DocumentLoaders implements INode {
         this.version = 1.0
         this.type = 'Document'
         this.icon = 'dstore.svg'
-        this.badge = 'NEW'
         this.category = 'Document Loaders'
         this.description = `Load data from pre-configured document stores`
         this.baseClasses = [this.type]

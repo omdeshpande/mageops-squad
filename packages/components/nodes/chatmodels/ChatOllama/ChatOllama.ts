@@ -1,8 +1,9 @@
-import { ChatOllama, ChatOllamaInput } from '@langchain/community/chat_models/ollama'
+import { ChatOllamaInput } from '@langchain/ollama'
+import { BaseChatModelParams } from '@langchain/core/language_models/chat_models'
 import { BaseCache } from '@langchain/core/caches'
-import { BaseLLMParams } from '@langchain/core/language_models/llms'
-import { INode, INodeData, INodeParams } from '../../../src/Interface'
+import { IMultiModalOption, INode, INodeData, INodeParams } from '../../../src/Interface'
 import { getBaseClasses } from '../../../src/utils'
+import { ChatOllama } from './FlowiseChatOllama'
 
 class ChatOllama_ChatModels implements INode {
     label: string
@@ -19,7 +20,7 @@ class ChatOllama_ChatModels implements INode {
     constructor() {
         this.label = 'ChatOllama'
         this.name = 'chatOllama'
-        this.version = 2.0
+        this.version = 5.0
         this.type = 'ChatOllama'
         this.icon = 'Ollama.svg'
         this.category = 'Chat Models'
@@ -53,6 +54,41 @@ class ChatOllama_ChatModels implements INode {
                 step: 0.1,
                 default: 0.9,
                 optional: true
+            },
+            {
+                label: 'Allow Image Uploads',
+                name: 'allowImageUploads',
+                type: 'boolean',
+                description:
+                    'Allow image input. Refer to the <a href="https://docs.flowiseai.com/using-flowise/uploads#image" target="_blank">docs</a> for more details.',
+                default: false,
+                optional: true
+            },
+            {
+                label: 'Streaming',
+                name: 'streaming',
+                type: 'boolean',
+                default: true,
+                optional: true,
+                additionalParams: true
+            },
+            {
+                label: 'JSON Mode',
+                name: 'jsonMode',
+                type: 'boolean',
+                description:
+                    'Coerces model outputs to only return JSON. Specify in the system prompt to return JSON. Ex: Format all responses as JSON object',
+                optional: true,
+                additionalParams: true
+            },
+            {
+                label: 'Keep Alive',
+                name: 'keepAlive',
+                type: 'string',
+                description: 'How long to keep connection alive. A duration string (such as "10m" or "24h")',
+                default: '5m',
+                optional: true,
+                additionalParams: true
             },
             {
                 label: 'Top P',
@@ -110,16 +146,6 @@ class ChatOllama_ChatModels implements INode {
                 type: 'number',
                 description:
                     'Sets the size of the context window used to generate the next token. (Default: 2048) Refer to <a target="_blank" href="https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values">docs</a> for more details',
-                step: 1,
-                optional: true,
-                additionalParams: true
-            },
-            {
-                label: 'Number of GQA groups',
-                name: 'numGqa',
-                type: 'number',
-                description:
-                    'The number of GQA groups in the transformer layer. Required for some models, for example it is 8 for llama2:70b. Refer to <a target="_blank" href="https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values">docs</a> for more details',
                 step: 1,
                 optional: true,
                 additionalParams: true
@@ -198,20 +224,23 @@ class ChatOllama_ChatModels implements INode {
         const mirostatEta = nodeData.inputs?.mirostatEta as string
         const mirostatTau = nodeData.inputs?.mirostatTau as string
         const numCtx = nodeData.inputs?.numCtx as string
-        const numGqa = nodeData.inputs?.numGqa as string
+        const keepAlive = nodeData.inputs?.keepAlive as string
         const numGpu = nodeData.inputs?.numGpu as string
         const numThread = nodeData.inputs?.numThread as string
         const repeatLastN = nodeData.inputs?.repeatLastN as string
         const repeatPenalty = nodeData.inputs?.repeatPenalty as string
-        const stop = nodeData.inputs?.stop as string
         const tfsZ = nodeData.inputs?.tfsZ as string
+        const allowImageUploads = nodeData.inputs?.allowImageUploads as boolean
+        const jsonMode = nodeData.inputs?.jsonMode as boolean
+        const streaming = nodeData.inputs?.streaming as boolean
 
         const cache = nodeData.inputs?.cache as BaseCache
 
-        const obj: ChatOllamaInput & BaseLLMParams = {
+        const obj: ChatOllamaInput & BaseChatModelParams = {
             baseUrl,
             temperature: parseFloat(temperature),
-            model: modelName
+            model: modelName,
+            streaming: streaming ?? true
         }
 
         if (topP) obj.topP = parseFloat(topP)
@@ -220,19 +249,23 @@ class ChatOllama_ChatModels implements INode {
         if (mirostatEta) obj.mirostatEta = parseFloat(mirostatEta)
         if (mirostatTau) obj.mirostatTau = parseFloat(mirostatTau)
         if (numCtx) obj.numCtx = parseFloat(numCtx)
-        if (numGqa) obj.numGqa = parseFloat(numGqa)
         if (numGpu) obj.numGpu = parseFloat(numGpu)
         if (numThread) obj.numThread = parseFloat(numThread)
         if (repeatLastN) obj.repeatLastN = parseFloat(repeatLastN)
         if (repeatPenalty) obj.repeatPenalty = parseFloat(repeatPenalty)
         if (tfsZ) obj.tfsZ = parseFloat(tfsZ)
-        if (stop) {
-            const stopSequences = stop.split(',')
-            obj.stop = stopSequences
-        }
+        if (keepAlive) obj.keepAlive = keepAlive
         if (cache) obj.cache = cache
+        if (jsonMode) obj.format = 'json'
 
-        const model = new ChatOllama(obj)
+        const multiModalOption: IMultiModalOption = {
+            image: {
+                allowImageUploads: allowImageUploads ?? false
+            }
+        }
+
+        const model = new ChatOllama(nodeData.id, obj)
+        model.setMultiModalOption(multiModalOption)
         return model
     }
 }

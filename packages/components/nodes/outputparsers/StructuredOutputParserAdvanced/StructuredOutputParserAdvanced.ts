@@ -1,8 +1,9 @@
 import { getBaseClasses, INode, INodeData, INodeParams } from '../../../src'
-import { BaseOutputParser } from 'langchain/schema/output_parser'
+import { BaseOutputParser } from '@langchain/core/output_parsers'
 import { StructuredOutputParser as LangchainStructuredOutputParser } from 'langchain/output_parsers'
 import { CATEGORY } from '../OutputParserHelpers'
 import { z } from 'zod'
+import { jsonrepair } from 'jsonrepair'
 
 class AdvancedStructuredOutputParser implements INode {
     label: string
@@ -61,6 +62,14 @@ class AdvancedStructuredOutputParser implements INode {
 
         try {
             const structuredOutputParser = LangchainStructuredOutputParser.fromZodSchema(zodSchema)
+
+            const baseParse = structuredOutputParser.parse
+
+            // Fix broken JSON from LLM
+            structuredOutputParser.parse = (text) => {
+                const jsonString = text.includes('```') ? text.trim().split(/```(?:json)?/)[1] : text.trim()
+                return baseParse.call(structuredOutputParser, jsonrepair(jsonString))
+            }
 
             // NOTE: When we change Flowise to return a json response, the following has to be changed to: JsonStructuredOutputParser
             Object.defineProperty(structuredOutputParser, 'autoFix', {

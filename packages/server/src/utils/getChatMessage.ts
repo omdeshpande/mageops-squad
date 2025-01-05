@@ -1,12 +1,14 @@
 import { MoreThanOrEqual, LessThanOrEqual } from 'typeorm'
-import { chatType } from '../Interface'
+import { ChatMessageRatingType, ChatType } from '../Interface'
 import { ChatMessage } from '../database/entities/ChatMessage'
 import { ChatMessageFeedback } from '../database/entities/ChatMessageFeedback'
 import { getRunningExpressApp } from '../utils/getRunningExpressApp'
+import { aMonthAgo, setDateToStartOrEndOfDay } from '.'
+
 /**
  * Method that get chat messages.
  * @param {string} chatflowid
- * @param {chatType} chatType
+ * @param {ChatType} chatType
  * @param {string} sortOrder
  * @param {string} chatId
  * @param {string} memoryType
@@ -14,10 +16,11 @@ import { getRunningExpressApp } from '../utils/getRunningExpressApp'
  * @param {string} startDate
  * @param {string} endDate
  * @param {boolean} feedback
+ * @param {ChatMessageRatingType[]} feedbackTypes
  */
 export const utilGetChatMessage = async (
     chatflowid: string,
-    chatType: chatType | undefined,
+    chatType: ChatType | undefined,
     sortOrder: string = 'ASC',
     chatId?: string,
     memoryType?: string,
@@ -25,23 +28,10 @@ export const utilGetChatMessage = async (
     startDate?: string,
     endDate?: string,
     messageId?: string,
-    feedback?: boolean
+    feedback?: boolean,
+    feedbackTypes?: ChatMessageRatingType[]
 ): Promise<ChatMessage[]> => {
     const appServer = getRunningExpressApp()
-    const setDateToStartOrEndOfDay = (dateTimeStr: string, setHours: 'start' | 'end') => {
-        const date = new Date(dateTimeStr)
-        if (isNaN(date.getTime())) {
-            return undefined
-        }
-        setHours === 'start' ? date.setHours(0, 0, 0, 0) : date.setHours(23, 59, 59, 999)
-        return date
-    }
-
-    const aMonthAgo = () => {
-        const date = new Date()
-        date.setMonth(new Date().getMonth() - 1)
-        return date
-    }
 
     let fromDate
     if (startDate) fromDate = setDateToStartOrEndOfDay(startDate, 'start')
@@ -79,7 +69,23 @@ export const utilGetChatMessage = async (
         // sort
         query.orderBy('chat_message.createdDate', sortOrder === 'DESC' ? 'DESC' : 'ASC')
 
-        const messages = await query.getMany()
+        const messages = (await query.getMany()) as Array<ChatMessage & { feedback: ChatMessageFeedback }>
+
+        if (feedbackTypes && feedbackTypes.length > 0) {
+            // just applying a filter to the messages array will only return the messages that have feedback,
+            // but we also want the message before the feedback message which is the user message.
+            const indicesToKeep = new Set()
+
+            messages.forEach((message, index) => {
+                if (message.role === 'apiMessage' && message.feedback && feedbackTypes.includes(message.feedback.rating)) {
+                    if (index > 0) indicesToKeep.add(index - 1)
+                    indicesToKeep.add(index)
+                }
+            })
+
+            return messages.filter((_, index) => indicesToKeep.has(index))
+        }
+
         return messages
     }
 

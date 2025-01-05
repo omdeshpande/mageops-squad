@@ -1,10 +1,12 @@
-import { ICommonObject, IFileUpload, INode, INodeData as INodeDataFromComponent, INodeParams } from 'flowise-components'
+import { IAction, ICommonObject, IFileUpload, INode, INodeData as INodeDataFromComponent, INodeParams } from 'flowise-components'
 
 export type MessageType = 'apiMessage' | 'userMessage'
 
-export type ChatflowType = 'CHATFLOW' | 'MULTIAGENT'
+export type ChatflowType = 'CHATFLOW' | 'MULTIAGENT' | 'ASSISTANT'
 
-export enum chatType {
+export type AssistantType = 'CUSTOM' | 'OPENAI' | 'AZURE'
+
+export enum ChatType {
     INTERNAL = 'INTERNAL',
     EXTERNAL = 'EXTERNAL'
 }
@@ -27,6 +29,7 @@ export interface IChatFlow {
     apikeyid?: string
     analytic?: string
     chatbotConfig?: string
+    followUpPrompts?: string
     apiConfig?: string
     category?: string
     type?: ChatflowType
@@ -42,12 +45,15 @@ export interface IChatMessage {
     fileAnnotations?: string
     agentReasoning?: string
     fileUploads?: string
+    artifacts?: string
     chatType: string
     chatId: string
     memoryType?: string
     sessionId?: string
     createdDate: Date
     leadEmail?: string
+    action?: string | null
+    followUpPrompts?: string
 }
 
 export interface IChatMessageFeedback {
@@ -207,17 +213,19 @@ export interface IDepthQueue {
 export interface IMessage {
     message: string
     type: MessageType
+    role?: MessageType
+    content?: string
 }
 
 export interface IncomingInput {
     question: string
     overrideConfig?: ICommonObject
-    socketIOClientId?: string
     chatId?: string
     stopNodeId?: string
     uploads?: IFileUpload[]
     leadEmail?: string
     history?: IMessage[]
+    action?: IAction
 }
 
 export interface IActiveChatflows {
@@ -226,6 +234,7 @@ export interface IActiveChatflows {
         endingNodeData?: INodeData
         inSync: boolean
         overrideConfig?: ICommonObject
+        chatId?: string
     }
 }
 
@@ -258,6 +267,43 @@ export interface ICredentialReturnResponse extends ICredential {
 export interface IUploadFileSizeAndTypes {
     fileTypes: string[]
     maxUploadSize: number
+}
+
+export interface IApiKey {
+    id: string
+    keyName: string
+    apiKey: string
+    apiSecret: string
+    updatedDate: Date
+}
+
+export interface ICustomTemplate {
+    id: string
+    name: string
+    flowData: string
+    updatedDate: Date
+    createdDate: Date
+    description?: string
+    type?: string
+    badge?: string
+    framework?: string
+    usecases?: string
+}
+
+export interface INodeOverrides {
+    [key: string]: {
+        label: string
+        name: string
+        type: string
+        enabled: boolean
+    }[]
+}
+
+export interface IVariableOverride {
+    id: string
+    name: string
+    type: 'static' | 'runtime'
+    enabled: boolean
 }
 
 // DocumentStore related

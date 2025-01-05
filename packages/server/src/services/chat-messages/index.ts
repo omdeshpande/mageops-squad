@@ -1,6 +1,6 @@
 import { DeleteResult, FindOptionsWhere } from 'typeorm'
 import { StatusCodes } from 'http-status-codes'
-import { chatType, IChatMessage } from '../../Interface'
+import { ChatMessageRatingType, ChatType, IChatMessage } from '../../Interface'
 import { utilGetChatMessage } from '../../utils/getChatMessage'
 import { utilAddChatMessage } from '../../utils/addChatMesage'
 import { getRunningExpressApp } from '../../utils/getRunningExpressApp'
@@ -27,7 +27,7 @@ const createChatMessage = async (chatMessage: Partial<IChatMessage>) => {
 // Get all chatmessages from chatflowid
 const getAllChatMessages = async (
     chatflowId: string,
-    chatTypeFilter: chatType | undefined,
+    chatTypeFilter: ChatType | undefined,
     sortOrder: string = 'ASC',
     chatId?: string,
     memoryType?: string,
@@ -35,7 +35,8 @@ const getAllChatMessages = async (
     startDate?: string,
     endDate?: string,
     messageId?: string,
-    feedback?: boolean
+    feedback?: boolean,
+    feedbackTypes?: ChatMessageRatingType[]
 ): Promise<ChatMessage[]> => {
     try {
         const dbResponse = await utilGetChatMessage(
@@ -48,7 +49,8 @@ const getAllChatMessages = async (
             startDate,
             endDate,
             messageId,
-            feedback
+            feedback,
+            feedbackTypes
         )
         return dbResponse
     } catch (error) {
@@ -62,7 +64,7 @@ const getAllChatMessages = async (
 // Get internal chatmessages from chatflowid
 const getAllInternalChatMessages = async (
     chatflowId: string,
-    chatTypeFilter: chatType | undefined,
+    chatTypeFilter: ChatType | undefined,
     sortOrder: string = 'ASC',
     chatId?: string,
     memoryType?: string,
@@ -70,7 +72,8 @@ const getAllInternalChatMessages = async (
     startDate?: string,
     endDate?: string,
     messageId?: string,
-    feedback?: boolean
+    feedback?: boolean,
+    feedbackTypes?: ChatMessageRatingType[]
 ): Promise<ChatMessage[]> => {
     try {
         const dbResponse = await utilGetChatMessage(
@@ -83,7 +86,8 @@ const getAllInternalChatMessages = async (
             startDate,
             endDate,
             messageId,
-            feedback
+            feedback,
+            feedbackTypes
         )
         return dbResponse
     } catch (error) {
@@ -124,6 +128,35 @@ const removeAllChatMessages = async (
     }
 }
 
+const removeChatMessagesByMessageIds = async (
+    chatflowid: string,
+    chatIdMap: Map<string, ChatMessage[]>,
+    messageIds: string[]
+): Promise<DeleteResult> => {
+    try {
+        const appServer = getRunningExpressApp()
+
+        for (const [composite_key] of chatIdMap) {
+            const [chatId] = composite_key.split('_')
+
+            // Remove all related feedback records
+            const feedbackDeleteOptions: FindOptionsWhere<ChatMessageFeedback> = { chatId }
+            await appServer.AppDataSource.getRepository(ChatMessageFeedback).delete(feedbackDeleteOptions)
+
+            // Delete all uploads corresponding to this chatflow/chatId
+            await removeFilesFromStorage(chatflowid, chatId)
+        }
+
+        const dbResponse = await appServer.AppDataSource.getRepository(ChatMessage).delete(messageIds)
+        return dbResponse
+    } catch (error) {
+        throw new InternalFlowiseError(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            `Error: chatMessagesService.removeAllChatMessages - ${getErrorMessage(error)}`
+        )
+    }
+}
+
 const abortChatMessage = async (chatId: string, chatflowid: string) => {
     try {
         const appServer = getRunningExpressApp()
@@ -151,5 +184,6 @@ export default {
     getAllChatMessages,
     getAllInternalChatMessages,
     removeAllChatMessages,
+    removeChatMessagesByMessageIds,
     abortChatMessage
 }

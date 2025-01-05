@@ -56,6 +56,7 @@ const ShareChatbot = ({ isSessionMemory, isAgentCanvas }) => {
 
     const [isPublicChatflow, setChatflowIsPublic] = useState(chatflow.isPublic ?? false)
     const [generateNewSession, setGenerateNewSession] = useState(chatbotConfig?.generateNewSession ?? false)
+    const [renderHTML, setRenderHTML] = useState(chatbotConfig?.renderHTML ?? false)
 
     const [title, setTitle] = useState(chatbotConfig?.title ?? '')
     const [titleAvatarSrc, setTitleAvatarSrc] = useState(chatbotConfig?.titleAvatarSrc ?? '')
@@ -65,6 +66,7 @@ const ShareChatbot = ({ isSessionMemory, isAgentCanvas }) => {
     const [backgroundColor, setBackgroundColor] = useState(chatbotConfig?.backgroundColor ?? defaultConfig.backgroundColor)
     const [fontSize, setFontSize] = useState(chatbotConfig?.fontSize ?? defaultConfig.fontSize)
     const [poweredByTextColor, setPoweredByTextColor] = useState(chatbotConfig?.poweredByTextColor ?? defaultConfig.poweredByTextColor)
+    const [showAgentMessages, setShowAgentMessages] = useState(chatbotConfig?.showAgentMessages || (isAgentCanvas ? true : undefined))
 
     const [botMessageBackgroundColor, setBotMessageBackgroundColor] = useState(
         chatbotConfig?.botMessage?.backgroundColor ?? defaultConfig.botMessage.backgroundColor
@@ -109,8 +111,7 @@ const ShareChatbot = ({ isSessionMemory, isAgentCanvas }) => {
             userMessage: {
                 showAvatar: false
             },
-            textInput: {},
-            overrideConfig: {}
+            textInput: {}
         }
         if (title) obj.title = title
         if (titleAvatarSrc) obj.titleAvatarSrc = titleAvatarSrc
@@ -135,13 +136,27 @@ const ShareChatbot = ({ isSessionMemory, isAgentCanvas }) => {
         if (textInputPlaceholder) obj.textInput.placeholder = textInputPlaceholder
         if (textInputSendButtonColor) obj.textInput.sendButtonColor = textInputSendButtonColor
 
-        if (isSessionMemory) obj.overrideConfig.generateNewSession = generateNewSession
+        if (isSessionMemory) obj.generateNewSession = generateNewSession
 
-        if (chatbotConfig?.starterPrompts) obj.starterPrompts = chatbotConfig.starterPrompts
+        if (renderHTML) {
+            obj.renderHTML = true
+        } else {
+            obj.renderHTML = false
+        }
 
-        if (isAgentCanvas) obj.showAgentMessages = true
+        if (isAgentCanvas) {
+            // if showAgentMessages is undefined, default to true
+            if (showAgentMessages === undefined || showAgentMessages === null) {
+                obj.showAgentMessages = true
+            } else {
+                obj.showAgentMessages = showAgentMessages
+            }
+        }
 
-        return obj
+        return {
+            ...chatbotConfig,
+            ...obj
+        }
     }
 
     const onSave = async () => {
@@ -301,6 +316,12 @@ const ShareChatbot = ({ isSessionMemory, isAgentCanvas }) => {
             case 'generateNewSession':
                 setGenerateNewSession(value)
                 break
+            case 'showAgentMessages':
+                setShowAgentMessages(value)
+                break
+            case 'renderHTML':
+                setRenderHTML(value)
+                break
         }
     }
 
@@ -428,6 +449,7 @@ const ShareChatbot = ({ isSessionMemory, isAgentCanvas }) => {
             {colorField(backgroundColor, 'backgroundColor', 'Background Color')}
             {textField(fontSize, 'fontSize', 'Font Size', 'number')}
             {colorField(poweredByTextColor, 'poweredByTextColor', 'PoweredBy TextColor')}
+            {isAgentCanvas && booleanField(showAgentMessages, 'showAgentMessages', 'Show Agent Reasoning')}
 
             {/*BOT Message*/}
             <Typography variant='h4' sx={{ mb: 1, mt: 2 }}>
@@ -467,6 +489,13 @@ const ShareChatbot = ({ isSessionMemory, isAgentCanvas }) => {
             {colorField(textInputTextColor, 'textInputTextColor', 'Text Color')}
             {textField(textInputPlaceholder, 'textInputPlaceholder', 'TextInput Placeholder', 'string', `Type question..`)}
             {colorField(textInputSendButtonColor, 'textInputSendButtonColor', 'TextIntput Send Button Color')}
+
+            <>
+                <Typography variant='h4' sx={{ mb: 1, mt: 2 }}>
+                    Render HTML
+                </Typography>
+                {booleanField(renderHTML, 'renderHTML', 'Render HTML on the chat')}
+            </>
 
             {/*Session Memory Input*/}
             {isSessionMemory && (

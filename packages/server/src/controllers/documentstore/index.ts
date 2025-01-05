@@ -4,6 +4,15 @@ import documentStoreService from '../../services/documentstore'
 import { DocumentStore } from '../../database/entities/DocumentStore'
 import { InternalFlowiseError } from '../../errors/internalFlowiseError'
 import { DocumentStoreDTO } from '../../Interface'
+import { getRateLimiter } from '../../utils/rateLimit'
+
+const getRateLimiterMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        return getRateLimiter(req, res, next)
+    } catch (error) {
+        next(error)
+    }
+}
 
 const createDocumentStore = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -160,16 +169,39 @@ const editDocumentStoreFileChunk = async (req: Request, res: Response, next: Nex
     }
 }
 
-const processFileChunks = async (req: Request, res: Response, next: NextFunction) => {
+const saveProcessingLoader = async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (typeof req.body === 'undefined') {
             throw new InternalFlowiseError(
                 StatusCodes.PRECONDITION_FAILED,
-                `Error: documentStoreController.processFileChunks - body not provided!`
+                `Error: documentStoreController.saveProcessingLoader - body not provided!`
             )
         }
         const body = req.body
-        const apiResponse = await documentStoreService.processAndSaveChunks(body)
+        const apiResponse = await documentStoreService.saveProcessingLoader(body)
+        return res.json(apiResponse)
+    } catch (error) {
+        next(error)
+    }
+}
+
+const processLoader = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        if (typeof req.params.loaderId === 'undefined' || req.params.loaderId === '') {
+            throw new InternalFlowiseError(
+                StatusCodes.PRECONDITION_FAILED,
+                `Error: documentStoreController.processLoader - loaderId not provided!`
+            )
+        }
+        if (typeof req.body === 'undefined') {
+            throw new InternalFlowiseError(
+                StatusCodes.PRECONDITION_FAILED,
+                `Error: documentStoreController.processLoader - body not provided!`
+            )
+        }
+        const docLoaderId = req.params.loaderId
+        const body = req.body
+        const apiResponse = await documentStoreService.processLoader(body, docLoaderId)
         return res.json(apiResponse)
     } catch (error) {
         next(error)
@@ -248,6 +280,154 @@ const getDocumentLoaders = async (req: Request, res: Response, next: NextFunctio
     }
 }
 
+const insertIntoVectorStore = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        if (typeof req.body === 'undefined') {
+            throw new Error('Error: documentStoreController.insertIntoVectorStore - body not provided!')
+        }
+        const body = req.body
+        const apiResponse = await documentStoreService.insertIntoVectorStore(body)
+        return res.json(DocumentStoreDTO.fromEntity(apiResponse))
+    } catch (error) {
+        next(error)
+    }
+}
+
+const queryVectorStore = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        if (typeof req.body === 'undefined') {
+            throw new Error('Error: documentStoreController.queryVectorStore - body not provided!')
+        }
+        const body = req.body
+        const apiResponse = await documentStoreService.queryVectorStore(body)
+        return res.json(apiResponse)
+    } catch (error) {
+        next(error)
+    }
+}
+
+const deleteVectorStoreFromStore = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        if (typeof req.params.storeId === 'undefined' || req.params.storeId === '') {
+            throw new InternalFlowiseError(
+                StatusCodes.PRECONDITION_FAILED,
+                `Error: documentStoreController.deleteVectorStoreFromStore - storeId not provided!`
+            )
+        }
+        const apiResponse = await documentStoreService.deleteVectorStoreFromStore(req.params.storeId)
+        return res.json(apiResponse)
+    } catch (error) {
+        next(error)
+    }
+}
+
+const saveVectorStoreConfig = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        if (typeof req.body === 'undefined') {
+            throw new Error('Error: documentStoreController.saveVectorStoreConfig - body not provided!')
+        }
+        const body = req.body
+        const apiResponse = await documentStoreService.saveVectorStoreConfig(body)
+        return res.json(apiResponse)
+    } catch (error) {
+        next(error)
+    }
+}
+
+const updateVectorStoreConfigOnly = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        if (typeof req.body === 'undefined') {
+            throw new Error('Error: documentStoreController.updateVectorStoreConfigOnly - body not provided!')
+        }
+        const body = req.body
+        const apiResponse = await documentStoreService.updateVectorStoreConfigOnly(body)
+        return res.json(apiResponse)
+    } catch (error) {
+        next(error)
+    }
+}
+
+const getEmbeddingProviders = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const apiResponse = await documentStoreService.getEmbeddingProviders()
+        return res.json(apiResponse)
+    } catch (error) {
+        next(error)
+    }
+}
+
+const getVectorStoreProviders = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const apiResponse = await documentStoreService.getVectorStoreProviders()
+        return res.json(apiResponse)
+    } catch (error) {
+        next(error)
+    }
+}
+
+const getRecordManagerProviders = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const apiResponse = await documentStoreService.getRecordManagerProviders()
+        return res.json(apiResponse)
+    } catch (error) {
+        next(error)
+    }
+}
+
+const upsertDocStoreMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        if (typeof req.params.id === 'undefined' || req.params.id === '') {
+            throw new InternalFlowiseError(
+                StatusCodes.PRECONDITION_FAILED,
+                `Error: documentStoreController.upsertDocStoreMiddleware - storeId not provided!`
+            )
+        }
+        if (typeof req.body === 'undefined') {
+            throw new Error('Error: documentStoreController.upsertDocStoreMiddleware - body not provided!')
+        }
+        const body = req.body
+        const files = (req.files as Express.Multer.File[]) || []
+        const apiResponse = await documentStoreService.upsertDocStoreMiddleware(req.params.id, body, files)
+        return res.json(apiResponse)
+    } catch (error) {
+        next(error)
+    }
+}
+
+const refreshDocStoreMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        if (typeof req.params.id === 'undefined' || req.params.id === '') {
+            throw new InternalFlowiseError(
+                StatusCodes.PRECONDITION_FAILED,
+                `Error: documentStoreController.refreshDocStoreMiddleware - storeId not provided!`
+            )
+        }
+        const body = req.body
+        const apiResponse = await documentStoreService.refreshDocStoreMiddleware(req.params.id, body)
+        return res.json(apiResponse)
+    } catch (error) {
+        next(error)
+    }
+}
+
+const generateDocStoreToolDesc = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        if (typeof req.params.id === 'undefined' || req.params.id === '') {
+            throw new InternalFlowiseError(
+                StatusCodes.PRECONDITION_FAILED,
+                `Error: documentStoreController.generateDocStoreToolDesc - storeId not provided!`
+            )
+        }
+        if (typeof req.body === 'undefined') {
+            throw new Error('Error: documentStoreController.generateDocStoreToolDesc - body not provided!')
+        }
+        const apiResponse = await documentStoreService.generateDocStoreToolDesc(req.params.id, req.body.selectedChatModel)
+        return res.json(apiResponse)
+    } catch (error) {
+        next(error)
+    }
+}
+
 export default {
     deleteDocumentStore,
     createDocumentStore,
@@ -256,9 +436,22 @@ export default {
     getDocumentStoreById,
     getDocumentStoreFileChunks,
     updateDocumentStore,
-    processFileChunks,
+    processLoader,
     previewFileChunks,
     getDocumentLoaders,
     deleteDocumentStoreFileChunk,
-    editDocumentStoreFileChunk
+    editDocumentStoreFileChunk,
+    insertIntoVectorStore,
+    getEmbeddingProviders,
+    getVectorStoreProviders,
+    getRecordManagerProviders,
+    saveVectorStoreConfig,
+    queryVectorStore,
+    deleteVectorStoreFromStore,
+    updateVectorStoreConfigOnly,
+    getRateLimiterMiddleware,
+    upsertDocStoreMiddleware,
+    refreshDocStoreMiddleware,
+    saveProcessingLoader,
+    generateDocStoreToolDesc
 }

@@ -18,7 +18,7 @@ class ChatFireworks_ChatModels implements INode {
     constructor() {
         this.label = 'ChatFireworks'
         this.name = 'chatFireworks'
-        this.version = 1.0
+        this.version = 2.0
         this.type = 'ChatFireworks'
         this.icon = 'Fireworks.png'
         this.category = 'Chat Models'
@@ -51,6 +51,13 @@ class ChatFireworks_ChatModels implements INode {
                 step: 0.1,
                 default: 0.9,
                 optional: true
+            },
+            {
+                label: 'Streaming',
+                name: 'streaming',
+                type: 'boolean',
+                default: true,
+                optional: true
             }
         ]
     }
@@ -59,6 +66,7 @@ class ChatFireworks_ChatModels implements INode {
         const cache = nodeData.inputs?.cache as BaseCache
         const temperature = nodeData.inputs?.temperature as string
         const modelName = nodeData.inputs?.modelName as string
+        const streaming = nodeData.inputs?.streaming as boolean
 
         const credentialData = await getCredentialData(nodeData.credential ?? '', options)
         const fireworksApiKey = getCredentialParam('fireworksApiKey', credentialData, nodeData)
@@ -67,7 +75,8 @@ class ChatFireworks_ChatModels implements INode {
             fireworksApiKey,
             model: modelName,
             modelName,
-            temperature: temperature ? parseFloat(temperature) : undefined
+            temperature: temperature ? parseFloat(temperature) : undefined,
+            streaming: streaming ?? true
         }
         if (cache) obj.cache = cache
 

@@ -1,3 +1,4 @@
+import { ICommonObject } from 'flowise-components'
 import { DocumentStore } from './database/entities/DocumentStore'
 
 export enum DocumentStoreStatus {
@@ -5,7 +6,9 @@ export enum DocumentStoreStatus {
     SYNC = 'SYNC',
     SYNCING = 'SYNCING',
     STALE = 'STALE',
-    NEW = 'NEW'
+    NEW = 'NEW',
+    UPSERTING = 'UPSERTING',
+    UPSERTED = 'UPSERTED'
 }
 
 export interface IDocumentStore {
@@ -17,6 +20,9 @@ export interface IDocumentStore {
     updatedDate: Date
     createdDate: Date
     status: DocumentStoreStatus
+    vectorStoreConfig: string | null // JSON string
+    embeddingConfig: string | null // JSON string
+    recordManagerConfig: string | null // JSON string
 }
 
 export interface IDocumentStoreFileChunk {
@@ -31,23 +37,25 @@ export interface IDocumentStoreFileChunk {
 export interface IDocumentStoreFileChunkPagedResponse {
     chunks: IDocumentStoreFileChunk[]
     count: number
+    characters: number
     file?: IDocumentStoreLoader
     currentPage: number
     storeName: string
     description: string
+    docId: string
 }
 
 export interface IDocumentStoreLoader {
-    id: string
-    loaderId: string
-    loaderName: string
-    loaderConfig: any // JSON string
-    splitterId: string
-    splitterName: string
-    splitterConfig: any // JSON string
-    totalChunks: number
-    totalChars: number
-    status: DocumentStoreStatus
+    id?: string
+    loaderId?: string
+    loaderName?: string
+    loaderConfig?: any // JSON string
+    splitterId?: string
+    splitterName?: string
+    splitterConfig?: any // JSON string
+    totalChunks?: number
+    totalChars?: number
+    status?: DocumentStoreStatus
     storeId?: string
     files?: IDocumentStoreLoaderFile[]
     source?: string
@@ -55,9 +63,37 @@ export interface IDocumentStoreLoader {
 }
 
 export interface IDocumentStoreLoaderForPreview extends IDocumentStoreLoader {
-    rehydrated: boolean
-    preview: boolean
-    previewChunkCount: number
+    rehydrated?: boolean
+    preview?: boolean
+    previewChunkCount?: number
+}
+
+export interface IDocumentStoreUpsertData {
+    docId: string
+    loader?: {
+        name: string
+        config: ICommonObject
+    }
+    splitter?: {
+        name: string
+        config: ICommonObject
+    }
+    vectorStore?: {
+        name: string
+        config: ICommonObject
+    }
+    embedding?: {
+        name: string
+        config: ICommonObject
+    }
+    recordManager?: {
+        name: string
+        config: ICommonObject
+    }
+}
+
+export interface IDocumentStoreRefreshData {
+    items: IDocumentStoreUpsertData[]
 }
 
 export interface IDocumentStoreLoaderFile {
@@ -72,6 +108,72 @@ export interface IDocumentStoreLoaderFile {
 export interface IDocumentStoreWhereUsed {
     id: string
     name: string
+}
+
+const getFileName = (fileBase64: string) => {
+    let fileNames = []
+    if (fileBase64.startsWith('FILE-STORAGE::')) {
+        const names = fileBase64.substring(14)
+        if (names.includes('[') && names.includes(']')) {
+            const files = JSON.parse(names)
+            return files.join(', ')
+        } else {
+            return fileBase64.substring(14)
+        }
+    }
+    if (fileBase64.startsWith('[') && fileBase64.endsWith(']')) {
+        const files = JSON.parse(fileBase64)
+        for (const file of files) {
+            const splitDataURI = file.split(',')
+            const filename = splitDataURI[splitDataURI.length - 1].split(':')[1]
+            fileNames.push(filename)
+        }
+        return fileNames.join(', ')
+    } else {
+        const splitDataURI = fileBase64.split(',')
+        const filename = splitDataURI[splitDataURI.length - 1].split(':')[1]
+        return filename
+    }
+}
+
+export const addLoaderSource = (loader: IDocumentStoreLoader, isGetFileNameOnly = false) => {
+    let source = 'None'
+
+    const handleUnstructuredFileLoader = (config: any, isGetFileNameOnly: boolean): string => {
+        if (config.fileObject) {
+            return isGetFileNameOnly ? getFileName(config.fileObject) : config.fileObject.replace('FILE-STORAGE::', '')
+        }
+        return config.filePath || 'None'
+    }
+
+    switch (loader.loaderId) {
+        case 'pdfFile':
+        case 'jsonFile':
+        case 'csvFile':
+        case 'file':
+        case 'jsonlinesFile':
+        case 'txtFile':
+            source = isGetFileNameOnly
+                ? getFileName(loader.loaderConfig[loader.loaderId])
+                : loader.loaderConfig[loader.loaderId]?.replace('FILE-STORAGE::', '') || 'None'
+            break
+        case 'apiLoader':
+            source = loader.loaderConfig.url + ' (' + loader.loaderConfig.method + ')'
+            break
+        case 'cheerioWebScraper':
+        case 'playwrightWebScraper':
+        case 'puppeteerWebScraper':
+            source = loader.loaderConfig.url || 'None'
+            break
+        case 'unstructuredFileLoader':
+            source = handleUnstructuredFileLoader(loader.loaderConfig, isGetFileNameOnly)
+            break
+        default:
+            source = 'None'
+            break
+    }
+
+    return source
 }
 
 export class DocumentStoreDTO {
@@ -89,6 +191,9 @@ export class DocumentStoreDTO {
     totalChars: number
     chunkSize: number
     loaders: IDocumentStoreLoader[]
+    vectorStoreConfig: any
+    embeddingConfig: any
+    recordManagerConfig: any
 
     constructor() {}
 
@@ -109,43 +214,22 @@ export class DocumentStoreDTO {
             documentStoreDTO.whereUsed = []
         }
 
+        if (entity.vectorStoreConfig) {
+            documentStoreDTO.vectorStoreConfig = JSON.parse(entity.vectorStoreConfig)
+        }
+        if (entity.embeddingConfig) {
+            documentStoreDTO.embeddingConfig = JSON.parse(entity.embeddingConfig)
+        }
+        if (entity.recordManagerConfig) {
+            documentStoreDTO.recordManagerConfig = JSON.parse(entity.recordManagerConfig)
+        }
+
         if (entity.loaders) {
             documentStoreDTO.loaders = JSON.parse(entity.loaders)
             documentStoreDTO.loaders.map((loader) => {
-                documentStoreDTO.totalChars += loader.totalChars
-                documentStoreDTO.totalChunks += loader.totalChunks
-                switch (loader.loaderId) {
-                    case 'pdfFile':
-                        loader.source = loader.loaderConfig.pdfFile.replace('FILE-STORAGE::', '')
-                        break
-                    case 'apiLoader':
-                        loader.source = loader.loaderConfig.url + ' (' + loader.loaderConfig.method + ')'
-                        break
-                    case 'cheerioWebScraper':
-                        loader.source = loader.loaderConfig.url
-                        break
-                    case 'playwrightWebScraper':
-                        loader.source = loader.loaderConfig.url
-                        break
-                    case 'puppeteerWebScraper':
-                        loader.source = loader.loaderConfig.url
-                        break
-                    case 'jsonFile':
-                        loader.source = loader.loaderConfig.jsonFile.replace('FILE-STORAGE::', '')
-                        break
-                    case 'docxFile':
-                        loader.source = loader.loaderConfig.docxFile.replace('FILE-STORAGE::', '')
-                        break
-                    case 'textFile':
-                        loader.source = loader.loaderConfig.txtFile.replace('FILE-STORAGE::', '')
-                        break
-                    case 'unstructuredFileLoader':
-                        loader.source = loader.loaderConfig.filePath
-                        break
-                    default:
-                        loader.source = 'None'
-                        break
-                }
+                documentStoreDTO.totalChars += loader.totalChars || 0
+                documentStoreDTO.totalChunks += loader.totalChunks || 0
+                loader.source = addLoaderSource(loader)
                 if (loader.status !== 'SYNC') {
                     documentStoreDTO.status = DocumentStoreStatus.STALE
                 }

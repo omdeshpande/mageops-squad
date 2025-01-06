@@ -97,7 +97,7 @@ Ability to view, create, edit, delete products
 
 # Tech stack
 
-1. [(https://flowiseai.com/)]
+1. [Flowise (Open Source)](https://github.com/FlowiseAI/Flowise)
 
 Sets up the Agent workflows. Including custom tools build on top of the open source app to interact with Magento API's
 

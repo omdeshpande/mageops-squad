@@ -26,11 +26,13 @@ Executes actions in the store, based on user intent, via REST API calls.
 
 # What does MageOps Squad support?
 
-Currently supports managing the below areas of the Magento store. More capabilities are on the roadmap. **Open for volunteer contributions too!!**
+Still in early development, currently supports managing the below areas of the Magento store. More capabilities are on the roadmap. **Open for volunteer contributions too!!**
 
 1. Catalog
 
 Ability to view, create, edit, delete products
+
+[![Demo](https://img.youtube.com/vi/J4O0W5Rz6sQ/hqdefault.jpg)](https://www.youtube.com/watch?v=J4O0W5Rz6sQ)
 
 # Installation
 

@@ -24,6 +24,14 @@ Magento functional expert, whose job is to ensure all required information is co
 
 Executes actions in the store, based on user intent, via REST API calls.
 
+# What does MageOps Squad support?
+
+Currently supports managing the below areas of the Magento store. More capabilities are on the roadmap. **Open for volunteer contributions too!!**
+
+1. Catalog
+
+Ability to view, create, edit, delete products
+
 # Installation
 
 ### Prerequisite
@@ -89,8 +97,10 @@ Executes actions in the store, based on user intent, via REST API calls.
 
 # Tech stack
 
-1. [[Flowise](https://flowiseai.com/)]
-Sets up the Agent workflows. 
+1. [(https://flowiseai.com/)]
+
+Sets up the Agent workflows. Including custom tools build on top of the open source app to interact with Magento API's
 
 2. LLM
+
 Provides the chat model capabilities. Works best with Azure Open AI / OpenAI models. It should work well with Llama 3 as well, but with the 70b+ models.

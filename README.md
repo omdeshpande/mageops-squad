@@ -1,6 +1,6 @@
 # MageOps Squad
 
-A squad of AI Agents to help manage your Magento store. There are 4 types of agents:
+A squad of AI Agents to help manage your Magento store. This team of agents can be accessed via an embeddable chat bot or API. There are 4 types of agents:
 1. Team Lead
 2. Support
 3. Analyst

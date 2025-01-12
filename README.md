@@ -34,6 +34,14 @@ Ability to view, create, edit, delete products
 
 [![Demo](https://img.youtube.com/vi/J4O0W5Rz6sQ/hqdefault.jpg)](https://www.youtube.com/watch?v=J4O0W5Rz6sQ)
 
+2. Quotes
+
+Ability to converse to create a quote and checkout like a user until place order (placing an order doesn't work yet, it is still in development)
+
+3. Orders
+
+Ability to ask questions and analyze current orders and quotes in the store
+
 # Installation
 
 ### Prerequisite

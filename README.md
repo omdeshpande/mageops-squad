@@ -24,15 +24,18 @@ Magento functional expert, whose job is to ensure all required information is co
 
 Executes actions in the store, based on user intent, via REST API calls.
 
-# What does MageOps Squad support?
+# What does MageOps Squad do?
 
 Still in early development, currently supports managing the below areas of the Magento store. More capabilities are on the roadmap. **Open for volunteer contributions too!!**
 
 1. Catalog
 
-Ability to view, create, edit, delete products
+View, create, edit, delete catalog products and attributes
 
-[![Demo](https://img.youtube.com/vi/J4O0W5Rz6sQ/hqdefault.jpg)](https://www.youtube.com/watch?v=J4O0W5Rz6sQ)
+### Demos
+
+ - Create a product by having a conversation with MageOps Squad --> [[Demo]](https://www.youtube.com/watch?v=J4O0W5Rz6sQ)
+ - Create products in bulk by exporting from an external system in JSON format and sharing with MageOps Squad --> [[Demo]](https://www.youtube.com/watch?v=AwL6Dvj0Dws)
 
 2. Quotes
 

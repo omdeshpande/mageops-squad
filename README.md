@@ -62,7 +62,7 @@ Ability to ask questions and analyze current orders and quotes in the store
 2. Go into repository folder
 
     ```bash
-    cd llm-workflows
+    cd mageops-squad
     ```
 
 3. Install all dependencies of all modules:

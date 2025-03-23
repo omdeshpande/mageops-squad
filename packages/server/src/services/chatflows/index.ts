@@ -1,4 +1,4 @@
-import { removeFolderFromStorage } from 'flowise-components'
+import { ICommonObject, removeFolderFromStorage } from 'flowise-components'
 import { StatusCodes } from 'http-status-codes'
 import { ChatflowType, IReactFlowObject } from '../../Interface'
 import { ChatFlow } from '../../database/entities/ChatFlow'
@@ -26,6 +26,15 @@ const checkIfChatflowIsValidForStreaming = async (chatflowId: string): Promise<a
         })
         if (!chatflow) {
             throw new InternalFlowiseError(StatusCodes.NOT_FOUND, `Chatflow ${chatflowId} not found`)
+        }
+
+        /* Check for post-processing settings, if available isStreamValid is always false */
+        let chatflowConfig: ICommonObject = {}
+        if (chatflow.chatbotConfig) {
+            chatflowConfig = JSON.parse(chatflow.chatbotConfig)
+            if (chatflowConfig?.postProcessing?.enabled === true) {
+                return { isStreaming: false }
+            }
         }
 
         /*** Get Ending Node with Directed Graph  ***/
@@ -267,12 +276,6 @@ const updateChatflow = async (chatflow: ChatFlow, updateChatFlow: ChatFlow): Pro
         await _checkAndUpdateDocumentStoreUsage(newDbChatflow)
         const dbResponse = await appServer.AppDataSource.getRepository(ChatFlow).save(newDbChatflow)
 
-        // chatFlowPool is initialized only when a flow is opened
-        // if the user attempts to rename/update category without opening any flow, chatFlowPool will be undefined
-        if (appServer.chatflowPool) {
-            // Update chatflowpool inSync to false, to build flow from scratch again because data has been changed
-            appServer.chatflowPool.updateInSync(chatflow.id, false)
-        }
         return dbResponse
     } catch (error) {
         throw new InternalFlowiseError(

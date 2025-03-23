@@ -37,6 +37,7 @@ import PromptLangsmithHubDialog from '@/ui-component/dialog/PromptLangsmithHubDi
 import ManageScrapedLinksDialog from '@/ui-component/dialog/ManageScrapedLinksDialog'
 import CredentialInputHandler from './CredentialInputHandler'
 import InputHintDialog from '@/ui-component/dialog/InputHintDialog'
+import NvidiaNIMDialog from '@/ui-component/dialog/NvidiaNIMDialog'
 
 // utils
 import { getInputVariables, getCustomConditionOutputs, isValidConnection, getAvailableNodesForVariable } from '@/utils/genericHelper'
@@ -95,6 +96,7 @@ const NodeInputHandler = ({
     const [inputHintDialogProps, setInputHintDialogProps] = useState({})
     const [showConditionDialog, setShowConditionDialog] = useState(false)
     const [conditionDialogProps, setConditionDialogProps] = useState({})
+    const [isNvidiaNIMDialogOpen, setIsNvidiaNIMDialogOpen] = useState(false)
     const [tabValue, setTabValue] = useState(0)
 
     const onInputHintDialogClicked = (hint) => {
@@ -319,6 +321,26 @@ const NodeInputHandler = ({
         return colDef
     }
 
+    const getDropdownOptions = (inputParam) => {
+        const preLoadOptions = []
+        if (inputParam.loadPreviousNodes) {
+            const nodes = getAvailableNodesForVariable(
+                reactFlowInstance?.getNodes() || [],
+                reactFlowInstance?.getEdges() || [],
+                data.id,
+                inputParam.id
+            )
+            for (const node of nodes) {
+                preLoadOptions.push({
+                    name: `{{ ${node.data.id} }}`,
+                    label: `{{ ${node.data.id} }}`,
+                    description: `Output from ${node.data.id}`
+                })
+            }
+        }
+        return [...preLoadOptions, ...inputParam.options]
+    }
+
     const getTabValue = (inputParam) => {
         return inputParam.tabs.findIndex((item) => item.name === data.inputs[`${inputParam.tabIdentifier}_${data.id}`]) >= 0
             ? inputParam.tabs.findIndex((item) => item.name === data.inputs[`${inputParam.tabIdentifier}_${data.id}`])
@@ -423,6 +445,13 @@ const NodeInputHandler = ({
         setAsyncOptionEditDialog('')
     }
 
+    const handleNvidiaNIMDialogComplete = (containerData) => {
+        if (containerData) {
+            data.inputs['basePath'] = containerData.baseUrl
+            data.inputs['modelName'] = containerData.image
+        }
+    }
+
     useEffect(() => {
         if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
             setPosition(ref.current.offsetTop + ref.current.clientHeight / 2)
@@ -508,6 +537,22 @@ const NodeInputHandler = ({
                                     ></PromptLangsmithHubDialog>
                                 </>
                             )}
+                        {data.name === 'chatNvidiaNIM' && inputParam.name === 'modelName' && (
+                            <>
+                                <Button
+                                    style={{
+                                        display: 'flex',
+                                        flexDirection: 'row',
+                                        width: '100%'
+                                    }}
+                                    sx={{ borderRadius: '12px', width: '100%', mb: 2, mt: -1 }}
+                                    variant='outlined'
+                                    onClick={() => setIsNvidiaNIMDialogOpen(true)}
+                                >
+                                    Setup NIM Locally
+                                </Button>
+                            </>
+                        )}
                         <div style={{ display: 'flex', flexDirection: 'row' }}>
                             <Typography>
                                 {inputParam.label}
@@ -515,6 +560,20 @@ const NodeInputHandler = ({
                                 {inputParam.description && <TooltipWithParser style={{ marginLeft: 10 }} title={inputParam.description} />}
                             </Typography>
                             <div style={{ flexGrow: 1 }}></div>
+                            {inputParam.hint && !isAdditionalParams && (
+                                <IconButton
+                                    size='small'
+                                    sx={{
+                                        height: 25,
+                                        width: 25
+                                    }}
+                                    title={inputParam.hint.label}
+                                    color='secondary'
+                                    onClick={() => onInputHintDialogClicked(inputParam.hint)}
+                                >
+                                    <IconBulb />
+                                </IconButton>
+                            )}
                             {inputParam.hint && isAdditionalParams && (
                                 <Button
                                     sx={{ p: 0, px: 2 }}
@@ -721,7 +780,8 @@ const NodeInputHandler = ({
                             <Dropdown
                                 disabled={disabled}
                                 name={inputParam.name}
-                                options={inputParam.options}
+                                options={getDropdownOptions(inputParam)}
+                                freeSolo={inputParam.freeSolo}
                                 onSelect={(newValue) => (data.inputs[inputParam.name] = newValue)}
                                 value={data.inputs[inputParam.name] ?? inputParam.default ?? 'choose an option'}
                             />
@@ -730,20 +790,22 @@ const NodeInputHandler = ({
                             <MultiDropdown
                                 disabled={disabled}
                                 name={inputParam.name}
-                                options={inputParam.options}
+                                options={getDropdownOptions(inputParam)}
                                 onSelect={(newValue) => (data.inputs[inputParam.name] = newValue)}
                                 value={data.inputs[inputParam.name] ?? inputParam.default ?? 'choose an option'}
                             />
                         )}
-                        {inputParam.type === 'asyncOptions' && (
+                        {(inputParam.type === 'asyncOptions' || inputParam.type === 'asyncMultiOptions') && (
                             <>
                                 {data.inputParams.length === 1 && <div style={{ marginTop: 10 }} />}
-                                <div key={reloadTimestamp} style={{ display: 'flex', flexDirection: 'row', alignContent: 'center' }}>
+                                <div key={reloadTimestamp} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 1 }}>
                                     <AsyncDropdown
                                         disabled={disabled}
                                         name={inputParam.name}
                                         nodeData={data}
                                         value={data.inputs[inputParam.name] ?? inputParam.default ?? 'choose an option'}
+                                        freeSolo={inputParam.freeSolo}
+                                        multiple={inputParam.type === 'asyncMultiOptions'}
                                         isCreateNewOption={EDITABLE_OPTIONS.includes(inputParam.name)}
                                         onSelect={(newValue) => (data.inputs[inputParam.name] = newValue)}
                                         onCreateNew={() => addAsyncOption(inputParam.name)}
@@ -857,6 +919,11 @@ const NodeInputHandler = ({
                 dialogProps={inputHintDialogProps}
                 onCancel={() => setShowInputHintDialog(false)}
             ></InputHintDialog>
+            <NvidiaNIMDialog
+                open={isNvidiaNIMDialogOpen}
+                onClose={() => setIsNvidiaNIMDialogOpen(false)}
+                onComplete={handleNvidiaNIMDialogComplete}
+            ></NvidiaNIMDialog>
         </div>
     )
 }
